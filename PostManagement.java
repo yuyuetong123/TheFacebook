@@ -15,16 +15,18 @@ public class PostManagement {
 
     // Create new post
     public void createPost(User user){
-        if(user.getIsBanned()){
+
+        User updatedUser = database.getProfile(user.getAccountID());
+        if(updatedUser.getIsBanned()){
             LocalDate currentDate = LocalDate.now();
-            if(currentDate.isAfter(user.getBanEndDate())){
-                user.setIsBanned(false);
-                this.database.setupProfile(user);
+            if(currentDate.isAfter(updatedUser.getBanEndDate())||currentDate.isEqual(updatedUser.getBanEndDate())){
+                database.updateUserProfile(updatedUser,"isBanned",String.valueOf(false));
             }else{
                 System.out.println("Sorry, you are unable to post anything.");
                 return;
             }
         }
+        
         PostBuilder postBuilder = new PostBuilder(user);
         StringBuilder strBuilder = new StringBuilder();
         System.out.println("Create Post");

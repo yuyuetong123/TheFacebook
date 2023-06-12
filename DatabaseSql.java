@@ -712,218 +712,6 @@ public class DatabaseSql<T> {
         }
     }
 
-    public String hashPassword(String password) {
-        try {
-            //Create MessageDigest instance for SHA-256 hashing
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            //Add password bytes to digest
-            md.update(password.getBytes());
-            //Get the hashed password bytes
-            byte[] hashedBytes = md.digest();
-            //Convert the hashed bytes to a hexadecimal representation
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hashedBytes) {
-                sb.append(String.format("%02x", b));
-            }
-            //Return the hashed password as a string
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public boolean verifyUsername(String username){
-        // Check length of username
-        if(username.length()<5 || username.length()>20){
-            System.out.println("Your username must be between 5-20 characters.");
-            return false;
-        }
-        
-        // Username regex pattern
-        String usernameRegex = "^[a-zA-Z0-9.!#$%&’*+=?^_~]*$";
-
-        // Create a Pattern object
-        Pattern pattern = Pattern.compile(usernameRegex);
-
-        // Create a Matcher object
-        Matcher matcher = pattern.matcher(username);
-
-        // Perform the matching
-        if(!matcher.matches()){
-            System.out.println("Invalid username.");
-            return false;
-        }
-
-        // Check for duplicated usernames
-        try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
-            PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM userprofile WHERE username = ?");
-            pstmt.setString(1, username);
-            ResultSet rs = pstmt.executeQuery();
-            
-            if (rs.next()) {
-                String occupiedUsername = rs.getString("username");
-                if(occupiedUsername.equals(username)){
-                    System.out.println("This username is occupied, please use another username.");
-                    return false;
-                }
-            }
-            
-            conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return true;
-    }
-
-    public boolean verifyEmail(String email){
-        // Email regex pattern
-        String emailRegex = "^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}\\-~]+@[a-zA-Z0-9\\-]+(?:\\.[a-zA-Z0-9\\-]+)*$";
-
-        // Create a Pattern object
-        Pattern pattern = Pattern.compile(emailRegex);
-
-        // Create a Matcher object
-        Matcher matcher = pattern.matcher(email);
-
-        // Perform the matching
-        if(!matcher.matches()){
-            System.out.println("Invalid email address.");
-            return false;
-        }
-
-        // Check for duplicated emails
-        try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
-            PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM userprofile WHERE email = ?");
-            pstmt.setString(1, email);
-            ResultSet rs = pstmt.executeQuery();
-            
-            if (rs.next()) {
-                String occupiedEmail = rs.getString("email");
-                if(occupiedEmail.equals(email)){
-                    System.out.println("This email address is occupied, please use another email address.");
-                    return false;
-                }
-            }
-            
-            conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return true;
-    }
-
-    public boolean verifyPhoneNo(String phoneNo){
-        // Check length of phone number
-        if(phoneNo.length()<7 || phoneNo.length()>14){
-            System.out.println("Your phone number must be between 7-14 digits.");
-            return false;
-        }
-        
-        // Email regex pattern
-        String emailRegex = "^[0-9]+-[0-9]*$";
-
-        // Create a Pattern object
-        Pattern pattern = Pattern.compile(emailRegex);
-
-        // Create a Matcher object
-        Matcher matcher = pattern.matcher(phoneNo);
-
-        // Perform the matching
-        if(!matcher.matches()){
-            System.out.println("Invalid phone number.");
-            return false;
-        }
-
-        // Check for duplicated phone numbers
-        try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
-            PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM userprofile WHERE phoneNo = ?");
-            pstmt.setString(1, phoneNo);
-            ResultSet rs = pstmt.executeQuery();
-            
-            if (rs.next()) {
-                String occupiedPhoneNo = rs.getString("phoneNo");
-                if(occupiedPhoneNo.equals(phoneNo)){
-                    System.out.println("This phone number is occupied, please use another phone number.");
-                    return false;
-                }
-            }
-            
-            conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return true;
-    }
-
-    public int generateAccountID() {
-        int temp = rand.nextInt(100000);
-        try {
-            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
-            PreparedStatement pstmt = conn.prepareStatement("SELECT accountID FROM useraccount");
-            ResultSet rs = pstmt.executeQuery();
-    
-            Set<Integer> accountIDs = new HashSet<>();
-            while (rs.next()) {
-                int storedAccountID = rs.getInt("accountID");
-                accountIDs.add(storedAccountID);
-            }
-    
-            do {
-                temp = rand.nextInt(100000);
-            } while (accountIDs.contains(temp));
-    
-            conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return temp;
-    }
-
-    public boolean privacy(User user, User u1, ConnectionGraph<String> graph){
-        if(graph.hasEdge(graph, user.getUsername(), u1.getUsername()))
-            return true;
-        else 
-            return false;
-    }
-
-    public boolean verifyPostExist(Post post){
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        try {
-            // Establish connection
-            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
-
-            // Read from userprofile table
-            pstmt = conn.prepareStatement("SELECT * FROM post WHERE postID = ?");
-            pstmt.setString(1, post.getPostID());
-            ResultSet rs = pstmt.executeQuery();
-
-            return rs.next();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-        return false;
-    }
-
-    public boolean confirmPassword(String p1, String p2){
-        if(p1.equals(p2))
-            return true;
-        else{
-            System.out.println("Password is not matched. Please try again.");
-            return false;
-        }
-    }
-
     public void createGroup(Group group) {
         try {
             Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
@@ -1063,6 +851,220 @@ public class DatabaseSql<T> {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    public String hashPassword(String password) {
+        try {
+            //Create MessageDigest instance for SHA-256 hashing
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            //Add password bytes to digest
+            md.update(password.getBytes());
+            //Get the hashed password bytes
+            byte[] hashedBytes = md.digest();
+            //Convert the hashed bytes to a hexadecimal representation
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashedBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            //Return the hashed password as a string
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public boolean verifyUsername(String username){
+        // Check length of username
+        if(username.length()<5 || username.length()>20){
+            System.out.println("Your username must be between 5-20 characters.");
+            return false;
+        }
+        
+        // Username regex pattern
+        String usernameRegex = "^[a-zA-Z0-9.!#$%&’*+=?^_~]*$";
+
+        // Create a Pattern object
+        Pattern pattern = Pattern.compile(usernameRegex);
+
+        // Create a Matcher object
+        Matcher matcher = pattern.matcher(username);
+
+        // Perform the matching
+        if(!matcher.matches()){
+            System.out.println("Invalid username.");
+            return false;
+        }
+
+        // Check for duplicated usernames
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
+            PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM userprofile WHERE username = ?");
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                String occupiedUsername = rs.getString("username");
+                if(occupiedUsername.equals(username)){
+                    System.out.println("This username is occupied, please use another username.");
+                    return false;
+                }
+            }
+            
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return true;
+    }
+
+    public boolean verifyEmail(String email){
+        // Email regex pattern
+        String emailRegex = "^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}\\-~]+@[a-zA-Z0-9\\-]+(?:\\.[a-zA-Z0-9\\-]+)*$";
+
+        // Create a Pattern object
+        Pattern pattern = Pattern.compile(emailRegex);
+
+        // Create a Matcher object
+        Matcher matcher = pattern.matcher(email);
+
+        // Perform the matching
+        if(!matcher.matches()){
+            System.out.println("Invalid email address.");
+            return false;
+        }
+
+        // Check for duplicated emails
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
+            PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM userprofile WHERE email = ?");
+            pstmt.setString(1, email);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                String occupiedEmail = rs.getString("email");
+                if(occupiedEmail.equals(email)){
+                    System.out.println("This email address is occupied, please use another email address.");
+                    return false;
+                }
+            }
+            
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return true;
+    }
+
+    public boolean verifyPhoneNo(String phoneNo){
+        // Check length of phone number
+        if(phoneNo.length()<7 || phoneNo.length()>14){
+            System.out.println("Your phone number must be between 7-14 digits.");
+            return false;
+        }
+        
+        // Email regex pattern
+        String emailRegex = "^[0-9]+-[0-9]*$";
+
+        // Create a Pattern object
+        Pattern pattern = Pattern.compile(emailRegex);
+
+        // Create a Matcher object
+        Matcher matcher = pattern.matcher(phoneNo);
+
+         
+        // Perform the matching
+        if(!matcher.matches()){
+            System.out.println("Invalid phone number.");
+            return false;
+        }
+        
+
+        // Check for duplicated phone numbers
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
+            PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM userprofile WHERE phoneNo = ?");
+            pstmt.setString(1, phoneNo);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                String occupiedPhoneNo = rs.getString("phoneNo");
+                if(occupiedPhoneNo.equals(phoneNo)){
+                    System.out.println("This phone number is occupied, please use another phone number.");
+                    return false;
+                }
+            }
+            
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return true;
+    }
+
+    public int generateAccountID() {
+        int temp = rand.nextInt(100000);
+        try {
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
+            PreparedStatement pstmt = conn.prepareStatement("SELECT accountID FROM useraccount");
+            ResultSet rs = pstmt.executeQuery();
+    
+            Set<Integer> accountIDs = new HashSet<>();
+            while (rs.next()) {
+                int storedAccountID = rs.getInt("accountID");
+                accountIDs.add(storedAccountID);
+            }
+    
+            do {
+                temp = rand.nextInt(100000);
+            } while (accountIDs.contains(temp));
+    
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return temp;
+    }
+
+    public boolean privacy(User user, User u1, ConnectionGraph<String> graph){
+        if(graph.hasEdge(graph, user.getUsername(), u1.getUsername()))
+            return true;
+        else 
+            return false;
+    }
+
+    public boolean verifyPostExist(Post post){
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        try {
+            // Establish connection
+            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/database", "root", "");
+
+            // Read from userprofile table
+            pstmt = conn.prepareStatement("SELECT * FROM post WHERE postID = ?");
+            pstmt.setString(1, post.getPostID());
+            ResultSet rs = pstmt.executeQuery();
+
+            return rs.next();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean confirmPassword(String p1, String p2){
+        if(p1.equals(p2))
+            return true;
+        else{
+            System.out.println("Password is not matched. Please try again.");
+            return false;
         }
     }
 

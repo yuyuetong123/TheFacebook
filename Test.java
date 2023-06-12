@@ -42,7 +42,7 @@ public class Test {
                             break;
                     case 2: manager.viewMyPage();
                             break;
-                    case 3: manager.setAdmin();
+                    case 3: manager.setAdmin(manager.database.getAccount(manager.user.getAccountID()));
                             break;
                     case 4: System.out.println("Please select banned duration: \n1 for 1 week; 2 for 1 month; 3 for 1 year");
                             int select=sc.nextInt();

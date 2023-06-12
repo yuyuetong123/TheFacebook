@@ -76,9 +76,10 @@ public class AccountManagement {
         
         // Store user info into CSV file
         database.registerUser(user);
-
+        
         // Add user to graph 
         connection.registerGraph(graph, username);
+        
         System.out.println("*************************");
     }
 
@@ -865,26 +866,32 @@ public class AccountManagement {
         }
     }
 
-    public void setAdmin(){
+    public void setAdmin(User u1){
+
+        //Check if the user who is calling this method is an admin
+        if(isAdmin(u1)){
+            System.out.println("You are already an administrator.");
+            return;
+        }
         
-        User updatedUser=this.database.getProfile(user.getAccountID());
-        updatedUser.setRole("admin");
-        database.setupProfile(updatedUser);
+        u1.setRole("admin");
+        database.updateUserAccount(u1,"role","admin");
+        database.updateUserProfile(u1,"role","admin");
         System.out.println("You are currently an admin.");
         
     }
 
     public boolean isAdmin(User u1){
 
-        return u1.getRole().equalsIgnoreCase("admin");
+        User userAdmin = database.getAccount(u1.getAccountID());
+        return userAdmin.getRole().equalsIgnoreCase("admin");
         
     }
 
     public void deleteAccount(User u1){
 
-        //To check if the user who is calling this method is an admin
-        User updatedUser=this.database.getProfile(this.user.getAccountID());
-        if(!isAdmin(updatedUser)){
+        //Check if the user who is calling this method is an admin
+        if(!isAdmin(user)){
             System.out.println("Sorry, this operation is for admin ONLY");
             return;
         }
@@ -897,17 +904,15 @@ public class AccountManagement {
     //For admins only
     public void banUser(User u1, User.BanDuration duration) {
         
-        //To check if the user who is calling this method is an admin
-        User updatedUser=this.database.getProfile(this.user.getAccountID());
-        if(!isAdmin(updatedUser)){
+        //Check if the user who is calling this method is an admin
+        if(!isAdmin(user)){
             System.out.println("Sorry, this operation is for admin ONLY");
             return;
         }
 
         
-        //To check if the user who is gonna be banned is an admin
-        User updatedUser2=this.database.getProfile(this.user.getAccountID());
-        if(!isAdmin(updatedUser2)){
+        //Check if the user who is gonna be banned is an admin
+        if(isAdmin(u1)){
             System.out.println("Sorry, this operation cannot be used for administrators.");
             return;
         }
@@ -916,27 +921,25 @@ public class AccountManagement {
         switch (duration) {
             case ONE_WEEK:
                 LocalDate banEndDate = LocalDate.now().plusWeeks(1);
-                u1.setIsBanned(true);
-                u1.setBanEndDate(banEndDate);
+                database.updateUserProfile(u1,"isBanned",String.valueOf(true));
+                database.updateUserProfile(u1,"banEndDate",String.valueOf(banEndDate));
                 break;
             
             case ONE_MONTH:
                 banEndDate = LocalDate.now().plusMonths(1);
-                u1.setIsBanned(true);
-                u1.setBanEndDate(banEndDate);
+                database.updateUserProfile(u1,"isBanned",String.valueOf(true));
+                database.updateUserProfile(u1,"banEndDate",String.valueOf(banEndDate));
                 break;
 
             case ONE_YEAR:
                 banEndDate = LocalDate.now().plusYears(1);
-                u1.setIsBanned(true);
-                u1.setBanEndDate(banEndDate);
+                database.updateUserProfile(u1,"isBanned",String.valueOf(true));
+                database.updateUserProfile(u1,"banEndDate",String.valueOf(banEndDate));
                 break;
 
             default:
                 break;
         }
-          
-        this.database.setupProfile(u1);
             
     }
         
@@ -944,9 +947,8 @@ public class AccountManagement {
     //Content is manually removed by the admin
     public void manuallyRemoveInappropriateContent(User u1, Post p1){
         
-        //To check if the user who is calling this method is an admin
-        User updatedUser=this.database.getProfile(this.user.getAccountID());
-        if(!isAdmin(updatedUser)){
+        //Check if the user who is calling this method is an admin
+        if(!isAdmin(user)){
             System.out.println("Sorry, this operation is for admin ONLY");
             return;
         }
@@ -961,13 +963,11 @@ public class AccountManagement {
     //Content is automatically determined whether it's appropriate or not by checking the prohibited words list
     public void autoRemoveInappropriateContent(User u1, Post p1) {
         
-        //To check if the user who is calling this method is an admin
-        User updatedUser=this.database.getProfile(this.user.getAccountID());
-        if(!isAdmin(updatedUser)){
+        //Check if the user who is calling this method is an admin
+        if(!isAdmin(user)){
             System.out.println("Sorry, this operation is for admin ONLY");
             return;
         }
-
         
         if(database.containsOffensiveLanguage(p1.getContent())){
             this.postManager.deletePost(p1,u1);
@@ -980,9 +980,8 @@ public class AccountManagement {
     
     public void updateProhibitedWord(String newWord){
 
-        //To check if the user who is calling this method is an admin
-        User updatedUser=this.database.getProfile(this.user.getAccountID());
-        if(!isAdmin(updatedUser)){
+        //Check if the user who is calling this method is an admin
+        if(!isAdmin(user)){
             System.out.println("Sorry, this operation is for admin ONLY");
             return;
         }
@@ -990,39 +989,46 @@ public class AccountManagement {
         this.database.addNewProhibitedWord(newWord);
     }
 
-    //To check the remaining banned time of any user
+    //Check the remaining banned time of any user
     public Period getRemainingBannedTime(User u1) {
         
-        if (u1.getIsBanned()) {
+        User updateU1 = database.getProfile(u1.getAccountID());
+        if (updateU1.getIsBanned()) {
             LocalDate currentDate = LocalDate.now();
-            if(currentDate.isAfter(u1.getBanEndDate())){
-                u1.setIsBanned(false);
-                this.database.setupProfile(u1);
-                System.out.println("The remaining time of being banned for "+u1.getUsername()+" is none. The user is currently able to post.");
+            if(currentDate.isAfter(updateU1.getBanEndDate())||currentDate.isEqual(updateU1.getBanEndDate())){
+                database.updateUserProfile(updateU1,"isBanned",String.valueOf(false));
+                System.out.println("The remaining time of being banned for "+updateU1.getUsername()+" is none. The user is currently able to post.");
                 return Period.ZERO;
             }
-            Period p=Period.between(currentDate, u1.getBanEndDate());
-            System.out.println("The remaining time of being banned for "+u1.getUsername()+": "+p);
+            Period p=Period.between(currentDate, updateU1.getBanEndDate());
+            System.out.println("The remaining time of being banned for "+updateU1.getUsername()+": "+p);
             return p;
         }else{
-            System.out.println("The remaining time of being banned for "+u1.getUsername()+" is none. The user is currently able to post.");
+            System.out.println("The remaining time of being banned for "+updateU1.getUsername()+" is none. The user is currently able to post.");
             return Period.ZERO;
         }
 
     }
 
     public void createGroup(String groupName){
-        this.groupManagement.createGroup(this.user, groupName);
-        User updatedUser = this.database.getProfile(this.user.getAccountID());
-        updatedUser.getGroupsName().add(groupName);
-        this.database.setupProfile(updatedUser);
+
+        User updatedU = database.getProfile(this.user.getAccountID());
+
+        this.groupManagement.createGroup(updatedU, groupName);
+        updatedU.getGroupsName().add(groupName);
+        this.database.updateUserProfile(updatedU, "groupsName",groupName);
+        
     }
 
     public void inviteToGroup(User invitee, Group group){
-        this.groupManagement.inviteToGroup(group,this.user,invitee);
-        User updatedUser = this.database.getProfile(invitee.getAccountID());
-        updatedUser.getGroupsName().add(group.getGroupName());
-        this.database.setupProfile(updatedUser);
+
+        User updatedU = database.getProfile(this.user.getAccountID());
+
+        this.groupManagement.inviteToGroup(group,updatedU,invitee);
+        User updatedUser2 = this.database.getProfile(invitee.getAccountID());
+        updatedUser2.getGroupsName().add(group.getGroupName());
+        this.database.updateUserProfile(updatedUser2, "groupsName",group.getGroupName());
+
     }
 
     public void showGroupNamesUserJoined() {
